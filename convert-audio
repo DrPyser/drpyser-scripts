@@ -1,0 +1,74 @@
+#! /bin/fish
+
+function help_exit
+    echo "Usage: convert [options] input-directory-path"
+    echo "Arguments:"
+    echo "-t : Encoding format of output"
+    echo "-o : Output destination directory path"
+    exit 1
+end
+
+set args (getopt -s sh t:o: $argv); or help_exit
+set args (fish -c "for el in $args; echo \$el; end")
+
+set i 1
+while true
+  switch $args[$i]
+    case "-h"
+      set i (math "$i + 1")
+      help_exit
+    case "-t"
+      set i (math "$i + 1")
+      set out_fmt $args[$i]
+    case "-o"
+      set i (math "$i + 1")
+      set out_path $args[$i]
+    case "--"
+      set i (math "$i + 1")
+      set in_path $args[$i]
+      break
+  end
+  set i (math "$i + 1")
+end
+
+set valid_fmt flac ogg mp3 mp4 m4a aac mpeg wav
+
+if not contains -- $out_fmt $valid_fmt
+  set out_fmt "ogg"
+end
+
+if not test -e $in_path
+  echo "Directory \"$in_path\" does not exist"
+  exit 1
+end
+
+set in_path (readlink -f $in_path)
+
+if test -z $out_path
+  set out_path "$in_path/$out_fmt"
+end
+
+if not test -e $out_path
+  mkdir -p $out_path
+end
+
+if not test -d $out_path
+  echo "\"$out_path\" is not a valid directory"
+  exit 1
+end
+
+set out_path (readlink -f $out_path)
+
+cd $out_path
+
+for i in $in_path/*
+  if test -f "$i"
+    ffmpeg -i "$i" (echo (basename -- "$i") | grep -Po '.*(?=\.)')".$out_fmt"
+  end
+end
+
+exit 0
+
+
+
+

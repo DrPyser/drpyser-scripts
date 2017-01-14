@@ -1,0 +1,55 @@
+#! /bin/fish
+
+function help_exit
+    echo "Usage: ffplaylist [options] [-f path/to/playlist] | ffplaylist [options] file ..."
+    echo "Options:"
+    echo "  -a --args: string containing options to be passed to ffplay"
+    echo "  -f --file: path to file containing line-separated playlist"
+    exit 1
+end
+
+set args (getopt -s sh t:o: $argv)
+or help_exit
+set args (fish -c "for el in $args; echo \$el; end")
+
+set i 1
+while true
+    switch $args[$i]
+        case "-a" "--args"
+            set i (math "$i + 1")
+            set ffplay_options $args[$i]
+            break
+        case "-f" "--file"
+            set i (math "$i + 1")
+            set playlist $args[$i]
+            break
+        case "--"
+            set i (math "$i + 1")
+            if math (count $playlist) "> 0" >/dev/null
+                break
+            else if math "$i <=" (count $args) >/dev/null
+                set files $args[$i..(count $args)]
+            else 
+                echo "Missing file names"
+                help_exit
+            end
+            break
+    end
+    set i (math "$i + 1")
+end
+
+set ffplay_options $ffplay_options" -autoexit"
+
+
+set playlist (echo $playlist; or echo "")
+
+cd (dirname $playlist)
+if test -e $playlist
+    for i in (cat $playlist)
+        ffplay $ffplay_options "$i"
+    end
+else
+    for i in $files
+        ffplay $ffplay_options "$i"
+    end
+end
